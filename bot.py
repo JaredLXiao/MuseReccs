@@ -6,6 +6,7 @@ from dotenv import load_dotenv, dotenv_values
 import asyncio
 import random
 from playlist_manager import playlists_setup
+from discord.ui import Button, View
 
 load_dotenv()
 token = os.getenv("DISCORD_TOKEN")
@@ -42,6 +43,21 @@ bot_commands = [
     {"name": "help", "description": "Shows this message."},
 ]
 
+bot_playlist_commands = [
+    {"name": "playlist_create <playlist name>",                     "description": "Creates a playlist with the name <playlist_name>." },
+    {"name": "playlist_add <song_title>, <playlist_name> ",         "description": "Adds <song_title> to <playlist_name>."},
+    {"name": "remove_from_playlist <song_number> <playlist_name>",  "description": "Removes the song in <playlist_name> at position <song_number>."},
+    {"name": "playlists",                                           "description": "See what playlist you have made, and the number of songs in each one."},
+    {"name": "playlist_view <playlist_name>",                       "description": "See what songs are in <playlist_name>."},
+    {"name": "playlist_play <playlist_name>",                       "description": "Plays the <playlist_name> playlist"},
+    {"name": "playlist_skip",                                       "description": "Skips the current song and plays the next one in the playlist."},
+    {"name": "playlist_shuffle <playlist_name>",                    "description": "Shuffles the currently playing playlist."},
+    {"name": "delete_playlist <playlist_name>",                     "description": "Deletes <playlist_name> playlist."},
+    {"name": "playlist_pause",                                      "description": "Pauses the currently playing song."},
+    {"name": "playlist_resume",                                     "description": "Resumes the paused song."},
+    {"name": "playlist_stop",                                       "description": "Stops the playlist and disconnects the bot from the voice channel."},
+]
+
 @bot.event
 async def on_ready():
     print("Bot is ready!")
@@ -49,7 +65,7 @@ async def on_ready():
 bot.remove_command("help") #Overrides existing help command in discord.py 
 
 @bot.command("help")
-async def help_showcase(ctx):
+async def help_showcase(ctx, page: int = 1):
     try:
         help_embed = discord.Embed(
             title="Bot Commands",
@@ -57,13 +73,33 @@ async def help_showcase(ctx):
             color=discord.Color.green()
         )
 
-        for command in bot_commands:
-            help_embed.add_field(name=f"**.{command['name']}**", value=command['description'], inline=False)
+        if page == 1:
+            for command in bot_commands:
+                help_embed.add_field(name=f"**.{command['name']}**", value=command['description'], inline=False)
+        else:
+            for command in bot_playlist_commands:
+                help_embed.add_field(name=f"**.{command['name']}**", value=command['description'], inline=False)
+
+        page_one_button = Button(label="page 1", style=discord.ButtonStyle.primary, custom_id="page_1")
+        page_two_button = Button(label="page 2", style=discord.ButtonStyle.secondary, custom_id="page_2")
+        view = View()
+        view.add_item([page_one_button])
+        view.add_item(page_two_button)
 
         await ctx.send(embed=help_embed)
 
     except Exception as e:
             print(e)
+
+@bot.event
+async def on_interaction(interaction):
+    if interaction.type == discord.InteractionType.component:
+        if interaction.data["custom_id"] == "page_1":
+             await interaction.response.defer()
+             await help_showcase(1)
+        elif interaction.data["custom_id"] == "page_2":
+            await interaction.response.defer()
+            await help_showcase(2)
 
 @bot.event
 async def play_next(ctx):
